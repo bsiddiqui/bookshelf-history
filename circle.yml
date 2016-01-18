@@ -1,0 +1,11 @@
+machine:
+  pre:
+    - sudo apt-get update
+    - sudo apt-get install build-essential g++ -y
+  environment:
+    DATABASE_URL: postgres://ubuntu@localhost/circle_test
+    NODE_ENV: test
+  services:
+    - postgresql
+  node:
+    version: v4.2
