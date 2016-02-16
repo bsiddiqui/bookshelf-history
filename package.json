@@ -1,6 +1,6 @@
 {
   "name": "bookshelf-history",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Backup and restore utility for Bookshelf.js",
   "main": "index.js",
   "scripts": {
