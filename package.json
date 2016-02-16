@@ -1,6 +1,6 @@
 {
-  "name": "@estate/bookshelf-history",
-  "version": "1.0.0",
+  "name": "bookshelf-history",
+  "version": "0.0.0",
   "description": "Backup and restore utility for Bookshelf.js",
   "main": "index.js",
   "scripts": {
@@ -18,7 +18,7 @@
     "backup",
     "restore"
   ],
-  "author": "Alan Hoffmeister <alanhoffmeister@gmail.com>",
+  "author": "Estate <team@try.estate>",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/estate/bookshelf-history/issues"
