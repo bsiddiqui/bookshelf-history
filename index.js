@@ -1,6 +1,5 @@
 'use strict'
 
-const extend = require('xtend')
 const diff = require('json-diff').diff
 
 /**
@@ -10,10 +9,10 @@ const diff = require('json-diff').diff
  * states will be stored
  * @return {Object} A new base model that can be extended
  */
-module.exports = (bookshelf, options) => {
+module.exports = (bookshelf, options = {}) => {
   const base = bookshelf.Model
-  const defaults = extend({
-    fields: {
+  const defaults = {
+    fields: Object.assign(options.fields || {}, {
       sequence: 'sequence',
       resource_id: 'resource_id',
       resource_type: 'resource_type',
@@ -21,10 +20,10 @@ module.exports = (bookshelf, options) => {
       changed: 'changed',
       patch: 'patch',
       operation: 'operation'
-    },
-    model: base.extend({ tableName: 'history' }),
-    autoHistory: new Set(['created', 'updated'])
-  }, options)
+    }),
+    model: options.model || base.extend({ tableName: 'history' }),
+    autoHistory: options.autoHistory || ['created', 'updated']
+  }
 
   bookshelf.Model = bookshelf.Model.extend({
     /**
@@ -36,29 +35,35 @@ module.exports = (bookshelf, options) => {
 
       // Do nothing if the model doesn't have history enabled
       if (this.history) {
-        this.historyOptions = extend(defaults, this.history)
+        this.historyOptions = Object.assign(defaults, this.history)
       } else {
         return
       }
 
+      const invalid = this.historyOptions.autoHistory.filter((i) => {
+        return !['created', 'updated'].includes(i)
+      })
+
+      if (invalid.length > 0) {
+        throw new Error(`autoHistory contains invalid options [${invalid.join(',')}]!`)
+      }
+
       // Register every autoHistory hook
       if (this.historyOptions.autoHistory) {
-        // We need to register pre-action hook for every post-action hook
-        if (this.historyOptions.autoHistory.has('updated')) {
-          this.historyOptions.autoHistory.add('updating')
+        const hookMap = {
+          created: 'creating',
+          updated: 'updating'
         }
-
         this.historyOptions.autoHistory.forEach(hook => {
-          if (['created', 'updated', 'saved'].includes(hook)) {
+          if (['created', 'updated'].includes(hook)) {
             this.on(hook, (model, options = {}) => {
               if (options.history === false) {
-
               } else {
                 return model.constructor.history(model, Boolean(options.patch), hook, options.transacting)
               }
             })
-          } else if (['creating', 'updating'].includes(hook)) {
-            this.on(hook, (model, attrs, options = {}) => {
+
+            this.on(hookMap[hook], (model, attrs, options = {}) => {
               // Previous attributes are not present in the post-action hook so let's save on the model here.
               model._bookshelfHistoryPreviousAttributes = model.previousAttributes()
             })
@@ -177,6 +182,10 @@ module.exports = (bookshelf, options) => {
         const forge = {}
         forge[fields.resource_id] = model.id
         forge[fields.resource_type] = model.tableName
+
+        if (!transacting) {
+          console.warn('No transaction detected at time of History write. In the future, Bookshelf-History will enforce a transaction.')
+        }
 
         return model.historyOptions.model.forge(forge)
           .fetch({ transacting, require: false })
