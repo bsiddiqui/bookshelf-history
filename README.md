@@ -35,6 +35,7 @@ let defaults = {
     sequence: 'sequence',
     resource_id: 'resource_id',
     resource_type: 'resource_type',
+    changed: 'changed',
     data: 'data',
     patch: 'patch',
     operation: 'operation'
@@ -69,7 +70,7 @@ let User = bookshelf.Model.extend({
 
 ### Migration
 
-A migration example [can be found here](/test/migrations/20160108232812_history.js).
+A migration example [can be found here](/test/migrations/20200228112321_create_history.js).
 All fields are required with the exception of `created_at`. You can also specify
 custom field names using the configuration as shown in the section above.
 
