@@ -11,6 +11,8 @@ exports.up = async (knex) => {
     t.boolean('patch').notNullable()
     t.string('resource_type').notNullable()
     t.uuid('resource_id').notNullable()
+    t.string('author_type')
+    t.uuid('author_id')
     t.jsonb('changed')
     t.jsonb('data')
     t.timestamp(true, true)

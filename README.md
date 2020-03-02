@@ -38,10 +38,12 @@ let defaults = {
     changed: 'changed',
     data: 'data',
     patch: 'patch',
-    operation: 'operation'
+    operation: 'operation',
+    authorCallback: null
   },
   model: bookshelf.Model.extend({ tableName: 'history' })
-  autoHistory: [ 'created', 'updated' ]
+  autoHistory: [ 'created', 'updated' ],
+
 }
 ```
 
@@ -67,6 +69,33 @@ let User = bookshelf.Model.extend({
   }
 })
 ```
+
+### Author Callbacks
+
+History now supports an `authorCallback(model)` option that will allow you to implement a function
+to return the `id` and `source` of the author who requested the model mutation. The implementation is
+up to you, but the most popular choice is to use the [continuation pattern](https://www.npmjs.com/package/continuation-local-storage).
+
+```
+const getNamespace = require('continuation-local-storage').getNamespace
+const localStorage = getNamespace('auth')
+```
+
+```
+history: {
+  authorCallback: () => {
+    if (!localStorage) {
+      return
+    }
+
+    return {
+      id: localStorage.get('id'),
+      source: localStorage.get('source')
+    }
+  }
+}
+```
+
 
 ### Migration
 

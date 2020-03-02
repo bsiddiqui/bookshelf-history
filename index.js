@@ -16,13 +16,16 @@ module.exports = (bookshelf, options = {}) => {
       sequence: 'sequence',
       resource_id: 'resource_id',
       resource_type: 'resource_type',
+      author_id: 'author_id',
+      author_type: 'author_type',
       data: 'data',
       changed: 'changed',
       patch: 'patch',
       operation: 'operation'
     }),
     model: options.model || base.extend({ tableName: 'history' }),
-    autoHistory: options.autoHistory || ['created', 'updated']
+    autoHistory: options.autoHistory || ['created', 'updated'],
+    authorCallback: null
   }
 
   bookshelf.Model = bookshelf.Model.extend({
@@ -40,8 +43,13 @@ module.exports = (bookshelf, options = {}) => {
         return
       }
 
+      const hookMap = {
+        created: 'creating',
+        updated: 'updating'
+      }
+
       const invalid = this.historyOptions.autoHistory.filter((i) => {
-        return !['created', 'updated'].includes(i)
+        return !Object.keys(hookMap).includes(i)
       })
 
       if (invalid.length > 0) {
@@ -50,16 +58,12 @@ module.exports = (bookshelf, options = {}) => {
 
       // Register every autoHistory hook
       if (this.historyOptions.autoHistory) {
-        const hookMap = {
-          created: 'creating',
-          updated: 'updating'
-        }
         this.historyOptions.autoHistory.forEach(hook => {
-          if (['created', 'updated'].includes(hook)) {
+          if (Object.keys(hookMap).includes(hook)) {
             this.on(hook, (model, options = {}) => {
               if (options.history === false) {
               } else {
-                return model.constructor.history(model, Boolean(options.patch), hook, options.transacting)
+                return model.constructor.history(model, Boolean(options.patch), hook, this.historyOptions, options.transacting)
               }
             })
 
@@ -173,10 +177,10 @@ module.exports = (bookshelf, options = {}) => {
      * @param {Boolean} patch If that operation was executed with a patch
      * @param {String} operation The name of the operation performed previously
      * from the backup
+     * @param {Object} historyOptions The history options of the model
      * @param {Object} [transacting] A valid transaction object
-     * @return {Number} The number of rows affected by the restoration
      */
-    history (model, patch, operation, transacting) {
+    history (model, patch, operation, historyOptions, transacting) {
       const fields = model.historyOptions.fields
       const execute = transacting => {
         const forge = {}
@@ -198,6 +202,14 @@ module.exports = (bookshelf, options = {}) => {
             data[fields.data] = JSON.stringify(model.attributes)
             data[fields.patch] = Boolean(patch)
             data[fields.operation] = operation
+
+            if (historyOptions.authorCallback && typeof historyOptions.authorCallback === 'function') {
+              const metadata = historyOptions.authorCallback(model)
+              if (metadata) {
+                data[fields.author_id] = metadata.id
+                data[fields.author_type] = metadata.source
+              }
+            }
 
             if (model._bookshelfHistoryPreviousAttributes) {
               const jsonDiff = diff(model._bookshelfHistoryPreviousAttributes, model.attributes)
