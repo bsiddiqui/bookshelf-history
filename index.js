@@ -20,13 +20,13 @@ module.exports = (bookshelf, options = {}) => {
       author_id: 'author_id',
       author_type: 'author_type',
       data: 'data',
-      changed: 'changed',
+      diff: 'diff',
       patch: 'patch',
       operation: 'operation'
     },
     model: base.extend({ tableName: 'history' }),
     autoHistory: ['created', 'updated'],
-    authorCallback: null
+    getAuthorMetadata: null
   }, options)
 
   bookshelf.Model = bookshelf.Model.extend({
@@ -46,7 +46,8 @@ module.exports = (bookshelf, options = {}) => {
 
       const hookMap = {
         created: 'creating',
-        updated: 'updating'
+        updated: 'updating',
+        destroyed: 'destroying'
       }
 
       const invalid = this.historyOptions.autoHistory.filter((i) => {
@@ -58,25 +59,21 @@ module.exports = (bookshelf, options = {}) => {
       }
 
       // Register every autoHistory hook
-      if (this.historyOptions.autoHistory) {
-        this.historyOptions.autoHistory.forEach(hook => {
-          if (Object.keys(hookMap).includes(hook)) {
-            this.on(hook, (model, options = {}) => {
-              if (options.history === false) {
-              } else {
-                return model.constructor.history(model, Boolean(options.patch), hook, this.historyOptions, options.transacting)
-              }
-            })
+      this.historyOptions.autoHistory.forEach(hook => {
+        if (Object.keys(hookMap).includes(hook)) {
+          this.on(hook, (model, options = {}) => {
+            if (options.history === false) {
+            } else {
+              return model.constructor.history(model, Boolean(options.patch), hook, this.historyOptions, options.transacting)
+            }
+          })
 
-            this.on(hookMap[hook], (model, attrs, options = {}) => {
-              // Previous attributes are not present in the post-action hook so let's save on the model here.
-              model._bookshelfHistoryPreviousAttributes = model.previousAttributes()
-            })
-          } else {
-            throw new Error(`Unhandled hook for Bookshelf-History ${hook}!`)
-          }
-        })
-      }
+          this.on(hookMap[hook], (model, attrs, options = {}) => {
+            // Previous attributes are not present in the post-action hook so let's save on the model here.
+            model._bookshelfHistoryPreviousAttributes = model.previousAttributes()
+          })
+        }
+      })
     }
   }, {
     /**
@@ -204,8 +201,8 @@ module.exports = (bookshelf, options = {}) => {
             data[fields.patch] = Boolean(patch)
             data[fields.operation] = operation
 
-            if (historyOptions.authorCallback && typeof historyOptions.authorCallback === 'function') {
-              const metadata = historyOptions.authorCallback(model)
+            if (historyOptions.getAuthorMetadata && typeof historyOptions.getAuthorMetadata === 'function') {
+              const metadata = historyOptions.getAuthorMetadata(model)
               if (metadata) {
                 data[fields.author_id] = metadata.id
                 data[fields.author_type] = metadata.source
@@ -214,7 +211,7 @@ module.exports = (bookshelf, options = {}) => {
 
             if (model._bookshelfHistoryPreviousAttributes) {
               const jsonDiff = diff(model._bookshelfHistoryPreviousAttributes, model.attributes)
-              data[fields.changed] = JSON.stringify(jsonDiff)
+              data[fields.diff] = JSON.stringify(jsonDiff)
               delete model._bookshelfHistoryPreviousAttributes
             }
 
