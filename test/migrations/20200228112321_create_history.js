@@ -13,7 +13,7 @@ exports.up = async (knex) => {
     t.uuid('resource_id').notNullable()
     t.string('author_type')
     t.uuid('author_id')
-    t.jsonb('changed')
+    t.jsonb('diff')
     t.jsonb('data')
     t.timestamp(true, true)
   })
