@@ -33,6 +33,7 @@
     "standard": "^14.3.1"
   },
   "dependencies": {
-    "json-diff": "^0.5.4"
+    "json-diff": "^0.5.4",
+    "xtend": "^4.0.2"
   }
 }

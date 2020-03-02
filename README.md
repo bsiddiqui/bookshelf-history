@@ -74,10 +74,10 @@ let User = bookshelf.Model.extend({
 
 History now supports an `authorCallback(model)` option that will allow you to implement a function
 to return the `id` and `source` of the author who requested the model mutation. The implementation is
-up to you, but the most popular choice is to use the [continuation pattern](https://www.npmjs.com/package/continuation-local-storage).
+up to you, but the most popular choice is to use the [continuation pattern](https://www.npmjs.com/package/cls-hooked).
 
 ```
-const getNamespace = require('continuation-local-storage').getNamespace
+const getNamespace = require('cls-hooked').getNamespace
 const localStorage = getNamespace('auth')
 ```
 

@@ -1,6 +1,7 @@
 'use strict'
 
 const diff = require('json-diff').diff
+const extend = require('xtend')
 
 /**
  * Base model for all models that need backup and restoration
@@ -11,8 +12,8 @@ const diff = require('json-diff').diff
  */
 module.exports = (bookshelf, options = {}) => {
   const base = bookshelf.Model
-  const defaults = {
-    fields: Object.assign(options.fields || {}, {
+  const defaults = extend({
+    fields: {
       sequence: 'sequence',
       resource_id: 'resource_id',
       resource_type: 'resource_type',
@@ -22,11 +23,11 @@ module.exports = (bookshelf, options = {}) => {
       changed: 'changed',
       patch: 'patch',
       operation: 'operation'
-    }),
-    model: options.model || base.extend({ tableName: 'history' }),
-    autoHistory: options.autoHistory || ['created', 'updated'],
+    },
+    model: base.extend({ tableName: 'history' }),
+    autoHistory: ['created', 'updated'],
     authorCallback: null
-  }
+  }, options)
 
   bookshelf.Model = bookshelf.Model.extend({
     /**
@@ -38,7 +39,7 @@ module.exports = (bookshelf, options = {}) => {
 
       // Do nothing if the model doesn't have history enabled
       if (this.history) {
-        this.historyOptions = Object.assign(defaults, this.history)
+        this.historyOptions = extend(defaults, this.history)
       } else {
         return
       }
