@@ -39,7 +39,7 @@ let defaults = {
     data: 'data',
     patch: 'patch',
     operation: 'operation',
-    authorCallback: null
+    getAuthorMetadata: null
   },
   model: bookshelf.Model.extend({ tableName: 'history' })
   autoHistory: [ 'created', 'updated' ],
@@ -70,27 +70,27 @@ let User = bookshelf.Model.extend({
 })
 ```
 
-### Author Callbacks
+### Author Metadata
 
-History now supports an `authorCallback(model)` option that will allow you to implement a function
+History now supports an `getAuthorMetadata(model)` option that will allow you to implement a function
 to return the `id` and `source` of the author who requested the model mutation. The implementation is
 up to you, but the most popular choice is to use the [continuation pattern](https://www.npmjs.com/package/cls-hooked).
 
 ```
 const getNamespace = require('cls-hooked').getNamespace
-const localStorage = getNamespace('auth')
+const localStorage = getNamespace('app')
 ```
 
 ```
 history: {
-  authorCallback: () => {
+  getAuthorMetadata: () => {
     if (!localStorage) {
       return
     }
 
     return {
-      id: localStorage.get('id'),
-      source: localStorage.get('source')
+      id: localStorage.get('author_id'),
+      source: localStorage.get('author_source')
     }
   }
 }
