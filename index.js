@@ -189,7 +189,9 @@ module.exports = (bookshelf, options = {}) => {
           console.warn('No transaction detected at time of History write. In the future, Bookshelf-History will enforce a transaction.')
         }
 
-        return model.historyOptions.model.forge(forge)
+        return model.historyOptions.model
+          .forge(forge)
+          .query(qb => qb.orderBy('sequence', 'desc'))
           .fetch({ transacting, require: false })
           .then(row => row ? Number(row.get(fields.sequence)) + 1 : 1)
           .then(sequence => {
