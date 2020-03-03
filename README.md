@@ -73,7 +73,7 @@ let User = bookshelf.Model.extend({
 ### Author Metadata
 
 History now supports an `getAuthorMetadata(model)` option that will allow you to implement a function
-to return the `id` and `source` of the author who requested the model mutation. The implementation is
+to return the `id` and `type` of the author who requested the model mutation. The implementation is
 up to you, but the most popular choice is to use the [continuation pattern](https://www.npmjs.com/package/cls-hooked).
 
 ```
@@ -90,7 +90,7 @@ history: {
 
     return {
       id: localStorage.get('author_id'),
-      source: localStorage.get('author_source')
+      type: localStorage.get('author_type')
     }
   }
 }

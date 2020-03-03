@@ -207,7 +207,7 @@ module.exports = (bookshelf, options = {}) => {
               const metadata = historyOptions.getAuthorMetadata(model)
               if (metadata) {
                 data[fields.author_id] = metadata.id
-                data[fields.author_type] = metadata.source
+                data[fields.author_type] = metadata.type
               }
             }
 
