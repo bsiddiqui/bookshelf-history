@@ -17,8 +17,7 @@ module.exports = (bookshelf, options = {}) => {
       sequence: 'sequence',
       resource_id: 'resource_id',
       resource_type: 'resource_type',
-      author_id: 'author_id',
-      author_type: 'author_type',
+      additional_metadata: 'additional_metadata',
       data: 'data',
       diff: 'diff',
       patch: 'patch',
@@ -26,7 +25,7 @@ module.exports = (bookshelf, options = {}) => {
     },
     model: base.extend({ tableName: 'history' }),
     autoHistory: ['created', 'updated'],
-    getAuthorMetadata: null
+    getAdditionalMetadata: null
   }, options)
 
   bookshelf.Model = bookshelf.Model.extend({
@@ -44,6 +43,7 @@ module.exports = (bookshelf, options = {}) => {
         return
       }
 
+      // Maintain a map of post-actions to pre-actions for us to handle the adding of previousAttributes.
       const hookMap = {
         created: 'creating',
         updated: 'updating',
@@ -195,20 +195,17 @@ module.exports = (bookshelf, options = {}) => {
           .fetch({ transacting, require: false })
           .then(row => row ? Number(row.get(fields.sequence)) + 1 : 1)
           .then(sequence => {
-            const data = {}
-            data[fields.sequence] = sequence
-            data[fields.resource_id] = model.id
-            data[fields.resource_type] = model.tableName
-            data[fields.data] = JSON.stringify(model.attributes)
-            data[fields.patch] = Boolean(patch)
-            data[fields.operation] = operation
+            const data = {
+              [fields.sequence]: sequence,
+              [fields.resource_id]: model.id,
+              [fields.resource_type]: model.tableName,
+              [fields.data]: JSON.stringify(model.attributes),
+              [fields.patch]: Boolean(patch),
+              [fields.operation]: operation
+            }
 
-            if (historyOptions.getAuthorMetadata && typeof historyOptions.getAuthorMetadata === 'function') {
-              const metadata = historyOptions.getAuthorMetadata(model)
-              if (metadata) {
-                data[fields.author_id] = metadata.id
-                data[fields.author_type] = metadata.type
-              }
+            if (historyOptions.getAdditionalMetadata && typeof historyOptions.getAdditionalMetadata === 'function') {
+              data[fields.additional_metadata] = historyOptions.getAdditionalMetadata(model)
             }
 
             if (model._bookshelfHistoryPreviousAttributes) {

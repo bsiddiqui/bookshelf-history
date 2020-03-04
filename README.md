@@ -35,11 +35,12 @@ let defaults = {
     sequence: 'sequence',
     resource_id: 'resource_id',
     resource_type: 'resource_type',
-    changed: 'changed',
+    additional_metadata: 'additional_metadata',
+    diff: 'diff',
     data: 'data',
     patch: 'patch',
     operation: 'operation',
-    getAuthorMetadata: null
+    getAdditionalMetadata: null
   },
   model: bookshelf.Model.extend({ tableName: 'history' })
   autoHistory: [ 'created', 'updated' ],
@@ -70,11 +71,13 @@ let User = bookshelf.Model.extend({
 })
 ```
 
-### Author Metadata
+### Additional Metadata
 
-History now supports an `getAuthorMetadata(model)` option that will allow you to implement a function
-to return the `id` and `type` of the author who requested the model mutation. The implementation is
-up to you, but the most popular choice is to use the [continuation pattern](https://www.npmjs.com/package/cls-hooked).
+History now supports an `getAdditionalMetadata(model)` option that will allow you to implement a function
+to return additional key value pairs to be stored with the history.
+In the example below, we use the [continuation pattern](https://www.npmjs.com/package/cls-hooked), to
+fetch the logged in user / admin who initiated a HTTP request that is mutating the model. The data is
+saved as `additional_metadata` in the `History` table.
 
 ```
 const getNamespace = require('cls-hooked').getNamespace
@@ -89,8 +92,8 @@ history: {
     }
 
     return {
-      id: localStorage.get('author_id'),
-      type: localStorage.get('author_type')
+      author_id: localStorage.get('author_id'),
+      author_type: localStorage.get('author_type')
     }
   }
 }
