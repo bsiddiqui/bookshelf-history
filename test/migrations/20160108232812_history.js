@@ -8,6 +8,8 @@ exports.up = function (knex) {
     table.boolean('patch').notNullable()
     table.string('resource_type').notNullable()
     table.integer('resource_id').notNullable()
+    table.string('metadata', 2097152)
+    table.string('diff', 2097152)
     table.string('data', 2097152)
     table.timestamp('created_at').defaultTo(knex.fn.now())
   })

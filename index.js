@@ -64,7 +64,7 @@ module.exports = (bookshelf, options = {}) => {
           this.on(hook, (model, options = {}) => {
             if (options.history === false) {
             } else {
-              return model.constructor.history(model, Boolean(options.patch), hook, this.historyOptions, options.transacting)
+              return model.constructor.history(model, Boolean(options.patch), hook, options.transacting)
             }
           })
 
@@ -175,10 +175,9 @@ module.exports = (bookshelf, options = {}) => {
      * @param {Boolean} patch If that operation was executed with a patch
      * @param {String} operation The name of the operation performed previously
      * from the backup
-     * @param {Object} historyOptions The history options of the model
      * @param {Object} [transacting] A valid transaction object
      */
-    history (model, patch, operation, historyOptions, transacting) {
+    history (model, patch, operation, transacting) {
       const fields = model.historyOptions.fields
       const execute = transacting => {
         const forge = {}
@@ -203,6 +202,8 @@ module.exports = (bookshelf, options = {}) => {
               [fields.patch]: Boolean(patch),
               [fields.operation]: operation
             }
+
+            const { historyOptions } = model
 
             if (historyOptions.getMetadata && typeof historyOptions.getMetadata === 'function') {
               data[fields.metadata] = historyOptions.getMetadata(model)

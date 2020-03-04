@@ -9,6 +9,8 @@ exports.up = function (knex) {
     table.string('resource_type').notNullable()
     table.integer('resource_id').notNullable()
     table.json('data')
+    table.json('diff')
+    table.json('metadata')
     table.timestamp('created_at').defaultTo(knex.fn.now())
   })
 }

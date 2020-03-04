@@ -32,15 +32,15 @@ in the Model or `false` if history is disabled.
 ```javascript
 let defaults = {
   fields: {
-    sequence: 'sequence',
-    resource_id: 'resource_id',
-    resource_type: 'resource_type',
-    metadata: 'metadata',
-    diff: 'diff',
-    data: 'data',
-    patch: 'patch',
-    operation: 'operation',
-    getMetadata: null
+    sequence: Integer,
+    resource_id: Any,
+    resource_type: String,
+    metadata: Object,
+    diff: Object,
+    data: Object,
+    patch: Boolean,
+    operation: String,
+    getMetadata: Function
   },
   model: bookshelf.Model.extend({ tableName: 'history' })
   autoHistory: [ 'created', 'updated' ],
@@ -102,14 +102,38 @@ history: {
 
 ### Migration
 
-A migration example [can be found here](/test/migrations/20200228112321_create_history.js).
-All fields are required with the exception of `created_at`. You can also specify
-custom field names using the configuration as shown in the section above.
+Below is an example migration. All fields are required with the exception of `created_at`.
+You can also specify custom field names using the configuration as shown in the section above.
 
 History also supports `JSON` and `JSONB` field types out of the box for the `data`
 field when running with PostgreSQL. With other databases the `data` field gets
 stringifyed with `JSON.stringify()` so make sure your `data` field is long
 enough to store all data you need.
+
+```javascript
+exports.up = async (knex) => {
+  await knex.schema.createTable('history', function (t) {
+    t.uuid('id')
+      .primary()
+      .notNullable()
+      .defaultTo(knex.raw('uuid_generate_v4()'))
+    t.integer('sequence').notNullable()
+    t.string('operation').notNullable()
+    t.boolean('patch').notNullable()
+    t.string('resource_type').notNullable()
+    t.uuid('resource_id').notNullable()
+    t.jsonb('metadata')
+    t.jsonb('diff')
+    t.jsonb('data')
+    t.timestamp(true, true)
+  })
+}
+
+exports.down = async (knex) => {
+  await knex.schema.dropTable('history')
+}
+```
+
 
 ### Bypassing backups
 
