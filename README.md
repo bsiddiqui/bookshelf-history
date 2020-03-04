@@ -86,7 +86,7 @@ const localStorage = getNamespace('app')
 
 ```
 history: {
-  getAuthorMetadata: () => {
+  getAdditionalMetadata: () => {
     if (!localStorage) {
       return
     }
