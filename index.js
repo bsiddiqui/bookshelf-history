@@ -17,7 +17,7 @@ module.exports = (bookshelf, options = {}) => {
       sequence: 'sequence',
       resource_id: 'resource_id',
       resource_type: 'resource_type',
-      additional_metadata: 'additional_metadata',
+      metadata: 'metadata',
       data: 'data',
       diff: 'diff',
       patch: 'patch',
@@ -25,7 +25,7 @@ module.exports = (bookshelf, options = {}) => {
     },
     model: base.extend({ tableName: 'history' }),
     autoHistory: ['created', 'updated'],
-    getAdditionalMetadata: null
+    getMetadata: null
   }, options)
 
   bookshelf.Model = bookshelf.Model.extend({
@@ -204,8 +204,8 @@ module.exports = (bookshelf, options = {}) => {
               [fields.operation]: operation
             }
 
-            if (historyOptions.getAdditionalMetadata && typeof historyOptions.getAdditionalMetadata === 'function') {
-              data[fields.additional_metadata] = historyOptions.getAdditionalMetadata(model)
+            if (historyOptions.getMetadata && typeof historyOptions.getMetadata === 'function') {
+              data[fields.metadata] = historyOptions.getMetadata(model)
             }
 
             if (model._bookshelfHistoryPreviousAttributes) {
