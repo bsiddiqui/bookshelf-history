@@ -50,6 +50,10 @@ module.exports = (bookshelf, options = {}) => {
         destroyed: 'destroying'
       }
 
+      if (!Array.isArray(this.historyOptions.autoHistory)) {
+        return
+      }
+
       const invalid = this.historyOptions.autoHistory.filter((i) => {
         return !Object.keys(hookMap).includes(i)
       })
@@ -190,7 +194,7 @@ module.exports = (bookshelf, options = {}) => {
 
         return model.historyOptions.model
           .forge(forge)
-          .query(qb => qb.orderBy('sequence', 'desc'))
+          .query(qb => qb.orderBy(fields.sequence, 'desc'))
           .fetch({ transacting, require: false })
           .then(row => row ? Number(row.get(fields.sequence)) + 1 : 1)
           .then(sequence => {

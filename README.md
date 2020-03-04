@@ -162,5 +162,10 @@ User.forge({
 ```
 cd ./bookshelf-history
 npm install
-DATABASE_URL=postgres://postgres:postgres@localhost/history npm test
+```
+
+In `.env` place the DATABASE_URL that will be used for tests. Or you can pass it on the command line.
+
+```
+DATABASE_URL=postgres://postgres:postgres@localhost/bookshelf_history npm test
 ```
