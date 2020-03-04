@@ -258,7 +258,7 @@ lab.describe('revert()', () => {
 })
 
 lab.describe('history', () => {
-  lab.test('works', async () => {
+  lab.test('it works', async () => {
     const Test = bookshelf.Model.extend({ tableName: 'test', history: { autoHistory: false } })
 
     const model = await Test.forge({
