@@ -4,8 +4,7 @@
   "description": "Backup and restore utility for Bookshelf.js",
   "main": "index.js",
   "scripts": {
-    "test": "standard && lab --verbose --colors --assert code --coverage",
-    "test-dirty": "lab --verbose --colors --assert code",
+    "test": "standard && lab --verbose --colors --assert @hapi/code --coverage",
     "migrate": "knex migrate:latest"
   },
   "repository": {
@@ -25,14 +24,16 @@
   },
   "homepage": "https://github.com/estate/bookshelf-history#readme",
   "devDependencies": {
-    "bookshelf": "^0.8.2",
-    "code": "^2.1.0",
-    "knex": "^0.8.6",
-    "lab": "^8.0.1",
+    "@hapi/code": "^8.0.1",
+    "@hapi/lab": "^22.0.3",
+    "bookshelf": "^1.1.0",
+    "dotenv": "^8.2.0",
+    "knex": "^0.20.10",
     "pg": "^4.4.3",
-    "standard": "^5.0.2"
+    "standard": "^14.3.1"
   },
   "dependencies": {
-    "xtend": "^4.0.1"
+    "json-diff": "^0.5.4",
+    "xtend": "^4.0.2"
   }
 }

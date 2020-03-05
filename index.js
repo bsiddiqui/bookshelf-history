@@ -1,6 +1,7 @@
 'use strict'
 
-let extend = require('xtend')
+const diff = require('json-diff').diff
+const extend = require('xtend')
 
 /**
  * Base model for all models that need backup and restoration
@@ -9,19 +10,22 @@ let extend = require('xtend')
  * states will be stored
  * @return {Object} A new base model that can be extended
  */
-module.exports = (bookshelf, options) => {
-  let base = bookshelf.Model
-  let defaults = extend({
+module.exports = (bookshelf, options = {}) => {
+  const base = bookshelf.Model
+  const defaults = extend({
     fields: {
       sequence: 'sequence',
       resource_id: 'resource_id',
       resource_type: 'resource_type',
+      metadata: 'metadata',
       data: 'data',
+      diff: 'diff',
       patch: 'patch',
       operation: 'operation'
     },
     model: base.extend({ tableName: 'history' }),
-    autoHistory: [ 'created', 'updated' ]
+    autoHistory: ['created', 'updated'],
+    getMetadata: null
   }, options)
 
   bookshelf.Model = bookshelf.Model.extend({
@@ -39,18 +43,41 @@ module.exports = (bookshelf, options) => {
         return
       }
 
+      // Maintain a map of post-actions to pre-actions for us to handle the adding of previousAttributes.
+      const hookMap = {
+        created: 'creating',
+        updated: 'updating',
+        destroyed: 'destroying'
+      }
+
+      if (!Array.isArray(this.historyOptions.autoHistory)) {
+        return
+      }
+
+      const invalid = this.historyOptions.autoHistory.filter((i) => {
+        return !Object.keys(hookMap).includes(i)
+      })
+
+      if (invalid.length > 0) {
+        throw new Error(`autoHistory contains invalid options [${invalid.join(',')}]!`)
+      }
+
       // Register every autoHistory hook
-      if (this.historyOptions.autoHistory) {
-        this.historyOptions.autoHistory.forEach(hook => {
-          this.on(hook, (model, attrs, options) => {
+      this.historyOptions.autoHistory.forEach(hook => {
+        if (Object.keys(hookMap).includes(hook)) {
+          this.on(hook, (model, options = {}) => {
             if (options.history === false) {
-              return
             } else {
               return model.constructor.history(model, Boolean(options.patch), hook, options.transacting)
             }
           })
-        })
-      }
+
+          this.on(hookMap[hook], (model, attrs, options = {}) => {
+            // Previous attributes are not present in the post-action hook so let's save on the model here.
+            model._bookshelfHistoryPreviousAttributes = model.previousAttributes()
+          })
+        }
+      })
     }
   }, {
     /**
@@ -61,10 +88,10 @@ module.exports = (bookshelf, options) => {
      * @return {Object} An instantiated History model containing the created backup
      */
     backup (resourceId, options) {
-      let execute = transacting => {
+      const execute = transacting => {
         return this.forge({ id: resourceId })
-        .fetch({ transacting })
-        .then(model => this.history(model, false, 'manual', transacting))
+          .fetch({ transacting })
+          .then(model => this.history(model, false, 'manual', transacting))
       }
 
       if (options && options.transacting) {
@@ -89,10 +116,10 @@ module.exports = (bookshelf, options) => {
         sequence = null
       }
 
-      let execute = (model, transacting) => {
-        let fields = model.historyOptions.fields
+      const execute = (model, transacting) => {
+        const fields = model.historyOptions.fields
 
-        let query = {}
+        const query = {}
         query[fields.resource_type] = this.prototype.tableName
         query[fields.resource_id] = resourceId
 
@@ -108,40 +135,40 @@ module.exports = (bookshelf, options) => {
             qb.orderBy(fields.sequence, 'desc')
           }
         })
-        .fetch({ transacting })
-        .then(history => {
-          let data = history.get('data')
-          let idAttribute = model.idAttribute
-          let where = {}
-          where[idAttribute] = model.id
+          .fetch({ transacting })
+          .then(history => {
+            let data = history.get('data')
+            const idAttribute = model.idAttribute
+            const where = {}
+            where[idAttribute] = model.id
 
-          // JSON/B fields are already deserialized
-          if (typeof data === 'string') {
-            data = JSON.parse(data)
-          }
+            // JSON/B fields are already deserialized
+            if (typeof data === 'string') {
+              data = JSON.parse(data)
+            }
 
-          // Remove the primary key
-          delete data[model.idAttribute]
+            // Remove the primary key
+            delete data[model.idAttribute]
 
-          return bookshelf.knex(model.tableName)
-          .transacting(transacting)
-          .update(data)
-          .where(where)
-        })
+            return bookshelf.knex(model.tableName)
+              .transacting(transacting)
+              .update(data)
+              .where(where)
+          })
       }
 
-      let forge = {}
+      const forge = {}
       forge[this.prototype.idAttribute] = resourceId
 
       if (options && options.transacting) {
         return this.forge(forge)
-        .fetch({ transacting: options.transacting })
-        .then(model => execute(model, options.transacting))
+          .fetch({ transacting: options.transacting })
+          .then(model => execute(model, options.transacting))
       } else {
         return bookshelf.transaction(transacting => {
           return this.forge(forge)
-          .fetch({ transacting })
-          .then(model => execute(model, transacting))
+            .fetch({ transacting })
+            .then(model => execute(model, transacting))
         })
       }
     },
@@ -153,30 +180,48 @@ module.exports = (bookshelf, options) => {
      * @param {String} operation The name of the operation performed previously
      * from the backup
      * @param {Object} [transacting] A valid transaction object
-     * @return {Number} The number of rows affected by the restoration
      */
     history (model, patch, operation, transacting) {
-      let fields = model.historyOptions.fields
-      let execute = transacting => {
-        let forge = {}
+      const fields = model.historyOptions.fields
+      const execute = transacting => {
+        const forge = {}
         forge[fields.resource_id] = model.id
         forge[fields.resource_type] = model.tableName
 
-        return model.historyOptions.model.forge(forge)
-        .fetch({ transacting, require: false })
-        .then(row => row ? Number(row.get(fields.sequence)) + 1 : 1)
-        .then(sequence => {
-          let data = {}
-          data[fields.sequence] = sequence
-          data[fields.resource_id] = model.id
-          data[fields.resource_type] = model.tableName
-          data[fields.data] = JSON.stringify(model)
-          data[fields.patch] = Boolean(patch)
-          data[fields.operation] = operation
+        if (!transacting) {
+          console.warn('No transaction detected at time of History write. In the future, Bookshelf-History will enforce a transaction.')
+        }
 
-          return model.historyOptions.model.forge(data)
-          .save(null, { transacting })
-        })
+        return model.historyOptions.model
+          .forge(forge)
+          .query(qb => qb.orderBy(fields.sequence, 'desc'))
+          .fetch({ transacting, require: false })
+          .then(row => row ? Number(row.get(fields.sequence)) + 1 : 1)
+          .then(sequence => {
+            const data = {
+              [fields.sequence]: sequence,
+              [fields.resource_id]: model.id,
+              [fields.resource_type]: model.tableName,
+              [fields.data]: JSON.stringify(model.attributes),
+              [fields.patch]: Boolean(patch),
+              [fields.operation]: operation
+            }
+
+            const { historyOptions } = model
+
+            if (historyOptions.getMetadata && typeof historyOptions.getMetadata === 'function') {
+              data[fields.metadata] = historyOptions.getMetadata(model)
+            }
+
+            if (model._bookshelfHistoryPreviousAttributes) {
+              const jsonDiff = diff(model._bookshelfHistoryPreviousAttributes, model.attributes)
+              data[fields.diff] = JSON.stringify(jsonDiff)
+              delete model._bookshelfHistoryPreviousAttributes
+            }
+
+            return model.historyOptions.model.forge(data)
+              .save(null, { transacting })
+          })
       }
 
       if (transacting) {

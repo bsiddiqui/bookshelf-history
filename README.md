@@ -32,15 +32,19 @@ in the Model or `false` if history is disabled.
 ```javascript
 let defaults = {
   fields: {
-    sequence: 'sequence',
-    resource_id: 'resource_id',
-    resource_type: 'resource_type',
-    data: 'data',
-    patch: 'patch',
-    operation: 'operation'
+    sequence: Integer,
+    resource_id: Any,
+    resource_type: String,
+    metadata: Object,
+    diff: Object,
+    data: Object,
+    patch: Boolean,
+    operation: String,
+    getMetadata: Function
   },
   model: bookshelf.Model.extend({ tableName: 'history' })
-  autoHistory: [ 'created', 'updated' ]
+  autoHistory: [ 'created', 'updated' ],
+
 }
 ```
 
@@ -67,16 +71,69 @@ let User = bookshelf.Model.extend({
 })
 ```
 
+### Additional Metadata
+
+History now supports a `getMetadata(model)` option that will allow you to implement a function
+to return additional key value pairs to be stored with the history.  In the example below,
+we use the [continuation pattern](https://www.npmjs.com/package/cls-hooked),
+to fetch the logged in user / admin who initiated a HTTP request that is mutating the model.
+The data is saved as `metadata` in the `History` table.
+
+```
+const getNamespace = require('cls-hooked').getNamespace
+const localStorage = getNamespace('app')
+```
+
+```
+history: {
+  getMetadata: () => {
+    if (!localStorage) {
+      return
+    }
+
+    return {
+      author_id: localStorage.get('author_id'),
+      author_type: localStorage.get('author_type')
+    }
+  }
+}
+```
+
+
 ### Migration
 
-A migration example [can be found here](/test/migrations/20160108232812_history.js).
-All fields are required with the exception of `created_at`. You can also specify
-custom field names using the configuration as shown in the section above.
+Below is an example migration. All fields are required with the exception of `created_at`.
+You can also specify custom field names using the configuration as shown in the section above.
 
 History also supports `JSON` and `JSONB` field types out of the box for the `data`
 field when running with PostgreSQL. With other databases the `data` field gets
 stringifyed with `JSON.stringify()` so make sure your `data` field is long
 enough to store all data you need.
+
+```javascript
+exports.up = async (knex) => {
+  await knex.schema.createTable('history', function (t) {
+    t.uuid('id')
+      .primary()
+      .notNullable()
+      .defaultTo(knex.raw('uuid_generate_v4()'))
+    t.integer('sequence').notNullable()
+    t.string('operation').notNullable()
+    t.boolean('patch').notNullable()
+    t.string('resource_type').notNullable()
+    t.uuid('resource_id').notNullable()
+    t.jsonb('metadata')
+    t.jsonb('diff')
+    t.jsonb('data')
+    t.timestamp(true, true)
+  })
+}
+
+exports.down = async (knex) => {
+  await knex.schema.dropTable('history')
+}
+```
+
 
 ### Bypassing backups
 
@@ -105,5 +162,10 @@ User.forge({
 ```
 cd ./bookshelf-history
 npm install
-DATABASE_URL=postgres://postgres:postgres@localhost/history npm test
+```
+
+In `.env` place the DATABASE_URL that will be used for tests. Or you can pass it on the command line.
+
+```
+DATABASE_URL=postgres://postgres:postgres@localhost/bookshelf_history npm test
 ```
