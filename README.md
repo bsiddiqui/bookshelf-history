@@ -125,7 +125,7 @@ exports.up = async (knex) => {
     t.jsonb('metadata')
     t.jsonb('diff')
     t.jsonb('data')
-    t.timestamp(true, true)
+    t.timestamps(true, true)
   })
 }
 
